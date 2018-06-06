@@ -35,13 +35,21 @@ class QtConan(ConanFile):
         "webengine": [True, False],
         "websockets": [True, False],
         "xmlpatterns": [True, False],
+        "declarative": [True, False],
+        "multimedia": [True, False],
+        "doc": [True, False],
+        "repotools": [True, False],
+        "qa": [True, False],
+        "quickcontrols": [True, False],
         "openssl": ["no", "yes", "linked"]
     }
     default_options = "shared=True", "fPIC=True", "opengl=desktop", "activeqt=False", \
                       "canvas3d=False", "connectivity=False", "gamepad=False", \
                       "graphicaleffects=False", "imageformats=False", "location=False", \
                       "serialport=False", "svg=False", "tools=False", "translations=False", \
-                      "webengine=False", "websockets=False", "xmlpatterns=False", "openssl=no"
+                      "webengine=False", "websockets=False", "xmlpatterns=False", "openssl=no", \
+                      "declarative=False", "multimedia=False", "doc=False", "repotools=False", \
+                      "qa=False", "quickcontrols=False"
     short_paths = True
 
     def system_requirements(self):
@@ -77,7 +85,15 @@ class QtConan(ConanFile):
                 self.requires("OpenSSL/1.0.2l@conan/stable")
 
     def source(self):
-        submodules = ["qtbase"]
+        self.run("git clone https://code.qt.io/qt/qt5.git")
+        self.run("cd %s && git checkout %s" % (self.source_dir, self.version))
+        self.run("cd %s && git submodule update --init %s" % (self.source_dir, "qtbase"))
+
+        if self.settings.os != "Windows":
+            self.run("chmod +x ./%s/configure" % self.source_dir)
+
+    def build(self):
+        submodules = []
 
         if self.options.activeqt:
             submodules.append("qtactiveqt")
@@ -107,15 +123,22 @@ class QtConan(ConanFile):
             submodules.append("qtwebsockets")
         if self.options.xmlpatterns:
             submodules.append("qtxmlpatterns")
+        if self.options.declarative:
+            submodules.append("qtdeclarative")
+        if self.options.multimedia:
+            submodules.append("qtmultimedia")
+        if self.options.doc:
+            submodules.append("qtdoc")
+        if self.options.repotools:
+            submodules.append("qtrepotools")
+        if self.options.qa:
+            submodules.append("qtqa")
+        if self.options.quickcontrols:
+            submodules.append("qtquickcontrols")
 
-        self.run("git clone https://code.qt.io/qt/qt5.git")
-        self.run("cd %s && git checkout %s" % (self.source_dir, self.version))
-        self.run("cd %s && git submodule update --init %s" % (self.source_dir, " ".join(submodules)))
+        if len(submodules) > 0:
+            self.run("cd %s && git submodule update --init %s" % (self.source_dir, " ".join(submodules)))
 
-        if self.settings.os != "Windows":
-            self.run("chmod +x ./%s/configure" % self.source_dir)
-
-    def build(self):
         args = ["-opensource", "-confirm-license", "-nomake examples", "-nomake tests",
                 "-prefix %s" % self.package_folder]
         if not self.options.shared:
@@ -161,12 +184,10 @@ class QtConan(ConanFile):
             else:
                 args += ["-openssl-linked"]
 
-            self.run("cd %s && %s && set" % (self.source_dir, vcvars))
-            self.run("cd %s && %s && configure %s"
-                     % (self.source_dir, vcvars, " ".join(args)))
-            self.run("cd %s && %s && %s %s"
-                     % (self.source_dir, vcvars, build_command, " ".join(build_args)))
-            self.run("cd %s && %s && %s install" % (self.source_dir, vcvars, build_command))
+            with tools.chdir(self.source_dir):
+                self.run("%s && configure %s" % (vcvars, " ".join(args)))
+                self.run("%s && %s %s" % (vcvars, build_command, " ".join(build_args)))
+                self.run("%s && %s install" % (vcvars, build_command))
 
     def _build_mingw(self, args):
         env_build = AutoToolsBuildEnvironment(self)
