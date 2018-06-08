@@ -9,7 +9,7 @@ import shutil
 
 class QtConan(ConanFile):
     name = "Qt"
-    version = "5.11.0"
+    version = "5.9.5"
     description = "Conan.io package for Qt library."
     url = "https://github.com/lucienboillod/conan-qt"
     license = "http://doc.qt.io/qt-5/lgpl.html"
@@ -99,7 +99,7 @@ class QtConan(ConanFile):
                 self.requires("OpenSSL/1.0.2l@conan/stable")
 
     def source(self):
-        url = "http://download.qt.io/official_releases/qt/{0}/{1}/single/qt-everywhere-src-{1}"\
+        url = "http://download.qt.io/official_releases/qt/{0}/{1}/single/qt-everywhere-opensource-src-{1}"\
             .format(self.version[:self.version.rfind('.')], self.version)
         if tools.os_info.is_windows:
             tools.get("%s.zip" % url)
@@ -108,7 +108,7 @@ class QtConan(ConanFile):
             installer.update() # Update the package database
             installer.install("pv")
             self.run("wget -qO- %s.tar.xz | pv | tar -xJ " % url)
-        shutil.move("qt-everywhere-src-%s" % self.version, "qt5")
+        shutil.move("qt-everywhere-opensource-src-%s" % self.version, "qt5")
 
     def build(self):
         args = ["-opensource", "-confirm-license", "-nomake examples", "-nomake tests",
